@@ -26,18 +26,35 @@ def load_data(file_path):
     # Read the data
     df = pd.read_csv(file_path)
     
-    # Extract informant IDs
-    informant_ids = df['informant_id'].unique()
+    print("CSV file columns:", df.columns.tolist())
     
-    # Pivot the data to create a matrix (informants x questions)
-    # Drop the informant_id column for the matrix
-    pivot_df = df.pivot(index='informant_id', columns='question_id', values='response')
+    # The first column is the informant ID
+    informant_column = "Informant"
+    
+    # Extract informant IDs
+    informant_ids = df[informant_column].unique()
+    
+    # All other columns (PQ1-PQ20) are the questions
+    question_columns = [col for col in df.columns if col != informant_column]
+    
+    # Set the informant column as the index
+    data_df = df.set_index(informant_column)
+    
+    # Get only the question columns
+    data_df = data_df[question_columns]
     
     # Get question IDs
-    question_ids = pivot_df.columns.tolist()
+    question_ids = data_df.columns.tolist()
     
     # Convert to numpy array
-    data_matrix = pivot_df.values
+    data_matrix = data_df.values
+    
+    # Make sure responses are binary
+    if not np.isin(data_matrix, [0, 1]).all():
+        print("Warning: Not all responses are binary (0 or 1). Converting non-binary values.")
+        data_matrix = (data_matrix > 0).astype(int)
+    
+    print(f"\nExtracted data matrix of shape {data_matrix.shape} ({len(informant_ids)} informants × {len(question_ids)} questions)")
     
     return data_matrix, informant_ids.tolist(), question_ids
 
@@ -293,9 +310,24 @@ def main():
     """
     # Load the data
     data_file = "../data/plant_knowledge.csv"
-    X, informant_ids, question_ids = load_data(data_file)
-    
-    print(f"Loaded data with {len(informant_ids)} informants and {len(question_ids)} questions")
+    try:
+        X, informant_ids, question_ids = load_data(data_file)
+        print(f"Loaded data with {len(informant_ids)} informants and {len(question_ids)} questions")
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        print("\nAttempting to show the CSV file contents for debugging:")
+        try:
+            with open(data_file, 'r') as f:
+                print("First 10 lines of the CSV file:")
+                for i, line in enumerate(f):
+                    if i < 10:
+                        print(line.strip())
+                    else:
+                        break
+            return
+        except Exception as e2:
+            print(f"Could not open the CSV file: {e2}")
+            return
     
     # Run the CCT model
     print("Running CCT model with PyMC (this may take a few minutes)...")
