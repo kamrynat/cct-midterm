@@ -4,7 +4,7 @@ import pymc as pm
 import arviz as az
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+#Used Claude to troubleshoot/debug code all throughout file
 def load_data(file_path):
     """
     Load the plant knowledge data from a CSV file.
